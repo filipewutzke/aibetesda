@@ -1,0 +1,26 @@
+<project name="backup" default="doCopy" basedir="../">
+	<description>Gera o arquivo de backup e copia para o servidor mas mantém uma copia local</description>
+	
+	<tstamp>
+		<format property="data" pattern="dd-MM-yyyy" locale="br"/>
+	</tstamp>
+	
+	<property name="backupFile" value="backupAibetesda${data}.zip"/>
+	<property name="diretorioDestino" location="C:/backup" />
+	<property name="backupzip" location="${diretorioDestino}/${backupFile}"/>
+
+	<target name="doBackup">
+		<echo>Criano diretório</echo>
+		<mkdir dir="${diretorioDestino}" />
+		<echo>Diretório criado. Zipando backup diário...</echo>
+		<zip destFile="${backupzip}" basedir="." />
+		<echo>Backup criado com sucesso</echo>
+	</target>
+	
+	<target name="doCopy" depends="doBackup">
+		<echo>Copiando para servidor remoto</echo>
+		<copy file="${backupzip}" tofile="\\Backup Diario\${backupFile}"/>
+		<echo>Pronto!</echo>
+	</target>
+
+</project>

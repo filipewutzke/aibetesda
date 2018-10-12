@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="
+     http://www.springframework.org/schema/beans 
+     http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+     http://www.springframework.org/schema/tx
+     http://www.springframework.org/schema/tx/spring-tx-3.0.xsd
+     http://www.springframework.org/schema/context
+	 http://www.springframework.org/schema/context/spring-context-3.0.xsd">
+	 
+	<!-- Scanear DAOs -->
+	<context:component-scan base-package="br.com.aibetesda.dao" />
+	
+	<tx:annotation-driven transaction-manager="hibernateTransactionManager"/>
+	
+	<!-- Cria um pool de conexões com o banco -->
+	<bean id="pooledDataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource" destroy-method="close">
+		<property name="user" value="postgres"/>
+		<property name="password" value="adminadmin"/>
+		<property name="driverClass" value="org.postgresql.Driver"/>
+		<property name="jdbcUrl" value="jdbc:postgresql://127.0.0.1:5432/aibetesda"/>
+		
+		<property name="maxPoolSize" value="10"/>
+		<property name="initialPoolSize" value="5" />
+		<property name="minPoolSize" value="2"/>
+		
+		<property name="checkoutTimeout" value="36000"/>
+		<property name="acquireRetryAttempts" value="10"/>
+		<property name="acquireIncrement" value="3"/>
+		<property name="idleConnectionTestPeriod" value="36000" />
+		<property name="maxIdleTime" value="1800"/>
+		<property name="maxStatements" value="1000"/>
+	</bean>
+	
+	<bean id="defaultLobHandler" class="org.springframework.jdbc.support.lob.DefaultLobHandler" />
+	<bean id="auditEventListener" class="org.hibernate.envers.event.AuditEventListener"/>	
+	
+	<!-- SessioFactory de sessões com o banco -->
+	<bean id="sessionFactory" class="br.com.aibetesda.factory.AibetesdaFactoryBean" destroy-method="destroy">
+		<property name="dataSource" ref="pooledDataSource" />
+		<property name="configurationClass" value="org.hibernate.cfg.AnnotationConfiguration" />
+		<property name="lobHandler" ref="defaultLobHandler" />
+		<property name="hibernateProperties">
+			<props>
+				<prop key="hibernate.connection.driver_class">org.postgresql.Driver</prop>
+				<prop key="hibernate.connection.password">adminadmin</prop>
+				<prop key="hibernate.connection.url">jdbc:postgresql://127.0.0.1:5432/aibetesda</prop>
+				<prop key="hibernate.connection.username">postgres</prop>
+				<prop key="hibernate.current_session_context_class">thread</prop>
+				<prop key="hibernate.format_sql">false</prop>
+				<prop key="hibernate.dialect">org.hibernate.dialect.PostgreSQLDialect</prop>				
+				<prop key="hibernate.order_updates">true</prop>
+				
+				<!-- Atualiza o banco ao iniciar o sistema -->
+				<prop key="hibernate.hbm2ddl.auto">update</prop>
+				
+				<!-- Cria o banco ao iniciar o sistema -->
+<!--				<prop key="hibernate.hbm2ddl.auto">create</prop>-->
+				
+				<prop key="hibernate.transaction.factory_class">
+					org.springframework.orm.hibernate3.SpringTransactionFactory
+				</prop>
+				
+				<prop key="hibernate.cache.provider_class">
+					org.hibernate.cache.SingletonEhCacheProvider
+				</prop>
+				
+			</props>
+		</property>
+		<property name="eventListeners">
+			<map>
+				<entry key="post-insert">
+					<ref local="auditEventListener"/>
+				</entry>
+				
+				<entry key="post-update">
+					<ref local="auditEventListener"/>
+				</entry>
+				
+				<entry key="post-delete">
+					<ref local="auditEventListener"/>
+				</entry>
+				
+				<entry key="pre-collection-update">
+					<ref local="auditEventListener"/>
+				</entry>
+				
+				<entry key="pre-collection-remove">
+					<ref local="auditEventListener"/>
+				</entry>
+				
+				<entry key="post-collection-recreate">
+					<ref local="auditEventListener"/>
+				</entry>
+			</map>
+		</property>
+	</bean>
+
+	<!-- Gerencia as transações com o banco -->
+	<bean id="hibernateTransactionManager" 
+		class="org.springframework.orm.hibernate3.HibernateTransactionManager">
+		<property name="nestedTransactionAllowed" value="true" />
+		<property name="sessionFactory" ref="sessionFactory" />
+	</bean>
+	
+	<!-- Carregamento automático do contexto do Spring ORM -->
+	<bean id="springApplicationContext" class="br.com.aibetesda.util.ApplicationContextUtils" />
+
+</beans>
